@@ -415,25 +415,25 @@ class TestSaveTokenAtomic:
             c.username = "name1"
             c._save_token()
             assert tok.exists()
-            # 临时文件必须已被 rename 消费，无残留
+            # 临时文件必须已被 replace 消费，无残留
             assert not (tmp_path / "tok.json.tmp").exists()
             data = json.loads(tok.read_text())
             assert data["token"] == "abc"
             assert data["user_id"] == "u1"
             assert "expires_at" in data
 
-    def test_uses_os_rename(self, tmp_path):
+    def test_uses_os_replace(self, tmp_path):
         tok = tmp_path / "tok.json"
         # 隔离 ENV_FILE，避免读取用户真实 ~/.workbuddy/.env.mubu（其 chmod 会污染 os.chmod mock）
         with mock.patch.object(mubu.client, "ENV_FILE", tmp_path / "no_env.mubu"), \
                 mock.patch.object(mubu.client, "TOKEN_FILE", tok):
-            with mock.patch("os.rename") as mren, \
+            with mock.patch("os.replace") as mren, \
                     mock.patch("os.chmod") as mchmod:
                 c = MubuClient(phone="p", password="w")
                 c.token = "x"
                 c._save_token()
                 assert mren.call_count == 1
-                # T5：原子写（rename）之后追加 chmod 0o600
+                # T5：原子写（replace）之后追加 chmod 0o600
                 mchmod.assert_called_once_with(tok, mubu_api.TOKEN_FILE_MODE)
 
 

@@ -2,6 +2,8 @@
 
 面向 Agent 的入口仍是 `scripts/mubu_api.py`，统一在子命令前加 `--agent`。不需要安装全局短命令，也不需要 MCP。省略 `--agent` 时保留既有 CLI 的输出与交互行为。
 
+LoreLab 成套安装使用 `lorelab tool mubu -- --agent …`；以下独立源码示例中的 `.venv/bin/python scripts/mubu_api.py` 前缀应替换为 `lorelab tool mubu --`，其余参数保持不变，避免误用全局 Python 或其他源码版本。
+
 ## 调用流程
 
 ```sh

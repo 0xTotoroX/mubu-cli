@@ -26,7 +26,6 @@ argparse / requests / Path / ...），使 ``mubu_api.os``、``mubu_api.getpass``
 
 # 标准库（作为模块级属性重新导出，保持向后兼容）
 import argparse
-import fcntl
 import getpass
 import json
 import logging
@@ -63,6 +62,7 @@ from mubu.config import (
     _resolve_base_url,
     _safe_local_path,
     _token_file_lock,
+    fcntl,
     logger,
 )
 from mubu.convert import (

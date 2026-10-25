@@ -1,7 +1,9 @@
 """mubu 包 — 配置、常量、日志、异常与路径安全基础设施。"""
+import errno
 import logging
 import os
 import sys
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Optional
@@ -10,7 +12,7 @@ from urllib.parse import urlparse
 try:
     import fcntl
 except ImportError:
-    fcntl = None  # 无 fcntl 平台（如 Windows）：锁降级为无操作
+    fcntl = None  # Windows 使用 msvcrt；旧 shim 保留此兼容属性。
 
 # --------------------------------------------------------------------------- #
 # 日志（P1 #16）：用 logging 取代散落的 print；warning/error 分级，
@@ -121,26 +123,38 @@ MAX_SEARCH_LIMIT = 50
 MAX_SEARCH_REQUESTS = 200
 
 
-# Token 文件跨进程 advisory 锁（P2-6）：Unix 用 fcntl.flock；无 fcntl 平台降级为无操作
+# Token 文件跨进程锁：Unix flock；Windows msvcrt 字节锁，阻塞等待。
 @contextmanager
 def _token_file_lock() -> Iterator[None]:
-    """用 fcntl.flock 对 Token 文件加排他锁，避免多进程并发写损坏文件。
-
-    锁文件为 TOKEN_FILE 同目录下的 ``<name>.lock``；进入临界区前 flock(LOCK_EX)，
-    退出（含异常）时 flock(LOCK_UN)，异常路径保证锁释放。
-    无 fcntl 平台（如 Windows）：跳过加锁，仅单进程场景下依赖原子 rename 保证完整性。
-    """
-    if fcntl is None:
-        yield          # 无 fcntl：跳过加锁，仅单进程场景（原子 rename 仍保证完整性）
-        return
+    """保护 Token/回收站写入；没有无操作降级，进程退出时由系统释放。"""
     lock_path = TOKEN_FILE.parent / (TOKEN_FILE.name + ".lock")
-    f = open(lock_path, "a")
-    try:
-        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-        yield
-    finally:
-        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        f.close()
+    with open(lock_path, "a+b") as handle:
+        if fcntl is not None:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        else:
+            import msvcrt
+
+            if os.fstat(handle.fileno()).st_size == 0:
+                handle.write(b"0")
+                handle.flush()
+            while True:
+                handle.seek(0)
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError as exc:
+                    if exc.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                        raise
+                    time.sleep(0.05)
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 class MubuError(Exception):

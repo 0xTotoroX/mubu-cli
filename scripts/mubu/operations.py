@@ -31,7 +31,7 @@ def load(operation_id):
         raise MubuError('无效 operation_id；应为操作返回的 32 位十六进制 ID')
     path = state_dir() / 'operations' / (operation_id + '.json')
     try:
-        record = json.loads(path.read_text())
+        record = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         raise MubuError('操作记录不存在、无法读取或已损坏') from None
     if not isinstance(record, dict) or record.get('operation_id') != operation_id:

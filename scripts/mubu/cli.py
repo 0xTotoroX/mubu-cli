@@ -43,6 +43,9 @@ def _configure_logging(verbose: bool) -> None:
 
 
 def main() -> None:
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = agent_cli.Parser(description="幕布 API 命令行工具")
     parser.add_argument("--agent", action="store_true", help="Agent 模式：JSON 输出、无交互、不自动重试")
     parser.add_argument("--auth", choices=["password", "desktop"], default="password",

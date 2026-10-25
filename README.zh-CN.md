@@ -13,6 +13,8 @@
 
 通过命令行管理你的幕布（Mubu）大纲 —— **同时作为一个 AI Agent Skill** —— 支持 Markdown 导入/导出的无损往返保真。
 
+Python CLI 与旧 `scripts/mubu_api.py` 入口在 Windows 不依赖 Unix 专用导入；没有 `python3` 命令时使用 `python` 或 `py -3`。文本文件与 CLI 输出采用 UTF-8，Token／回收站使用真实系统锁并原子替换已有文件。Windows 文件访问遵循用户目录 ACL，不能把 Unix `0600` 当成 Windows 权限隔离。仓库含平台分支测试，macOS 测试通过不代表真实 Windows 或账号流程已验收。
+
 ---
 
 ## ✨ 三条命令上手（magic moment）
@@ -104,11 +106,9 @@ python3 scripts/mubu_api.py create "周会" --folder <folder-id> --md examples/w
 
 ## 📦 安装
 
-```bash
-npx skills add liuboacean/mubu-integration
-```
+本组件由 LoreLab 维护，随产品成套安装 CLI 和 Skill。独立使用时，从 LoreLab 导出本组件，把整个导出目录注册到 Agent；根目录的 SKILL.md 需要随附的 scripts 和 docs。更新仍使用这份自有源码，不替换为原作者的 Skill 包。
 
-这会为你的 Agent 安装该 Skill。它是一个 Python 包 —— 你还需要 **Python 3.9+** 及运行时依赖：
+独立源码安装需要 **Python 3.9+** 及运行时依赖：
 
 ```bash
 pip install -r requirements.txt

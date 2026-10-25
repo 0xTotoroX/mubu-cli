@@ -99,7 +99,7 @@ class MubuClient:
         """从本地加载 Token（未过期才生效）"""
         if TOKEN_FILE.exists():
             try:
-                data = json.loads(TOKEN_FILE.read_text())
+                data = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
                 expires_at = data.get("expires_at", 0)
                 if time.time() < expires_at:
                     self.token = data.get("token")
@@ -113,9 +113,9 @@ class MubuClient:
         return False
 
     def _save_token(self) -> None:
-        """原子写 Token 到本地：先写临时文件再 rename，避免中途崩溃留残缺文件。
+        """原子写 Token 到本地：先写临时文件再 replace，避免中途崩溃留残缺文件。
 
-        M2 的 T5：rename 之后追加 chmod 0o600，确保 Token 文件仅属主可读写。
+        M2 的 T5：replace 之后追加 chmod 0o600；Unix 限属主，Windows 依赖用户目录 ACL。
         M4 的 T3：原子写整体用跨进程文件锁包裹，避免多进程并发写损坏 Token 文件。
         """
         self.expires_at = time.time() + 7200  # 2 小时过期
@@ -128,9 +128,9 @@ class MubuClient:
         }
         with _token_file_lock():
             tmp = TOKEN_FILE.parent / (TOKEN_FILE.name + ".tmp")
-            tmp.write_text(json.dumps(data, indent=2))
-            os.rename(tmp, TOKEN_FILE)
-            # M2 的 T5：设置权限 600，防止其它用户读取 Token
+            tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            os.replace(tmp, TOKEN_FILE)
+            # Unix 设置权限 600；Windows 的访问隔离由用户目录 ACL 决定。
             os.chmod(TOKEN_FILE, TOKEN_FILE_MODE)
 
     def _get_headers(self) -> Dict[str, str]:
@@ -556,12 +556,12 @@ class MubuClient:
         return {}
 
     def _save_trash(self, trash: Dict) -> None:
-        """原子写回收站快照：tmp → rename → chmod 600，整体置于文件锁内。"""
+        """原子写回收站快照：tmp → replace → chmod 600，整体置于文件锁内。"""
         with _token_file_lock():
             tmp = TRASH_FILE.parent / (TRASH_FILE.name + ".tmp")
             tmp.write_text(json.dumps(trash, ensure_ascii=False, indent=2),
                            encoding="utf-8")
-            os.rename(tmp, TRASH_FILE)
+            os.replace(tmp, TRASH_FILE)
             os.chmod(TRASH_FILE, TOKEN_FILE_MODE)
 
     def trash_item(self, item_id: str, item_type: str,

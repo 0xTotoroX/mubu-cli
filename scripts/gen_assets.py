@@ -1,8 +1,15 @@
+"""[INPUT]: Pillow 与模块相对资源目录，可用 MUBU_ASSET_OUTPUT_DIR 覆盖。
+[OUTPUT]: 社交预览图和演示 GIF。
+[POS]: 幕布组件的文档资源生成器；不依赖开发者个人目录。
+[PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md。
+"""
+
 import os
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = "/Users/liubo/WorkBuddy/2026-07-14-06-18-40/mubu-integration/assets"
+OUT = Path(os.environ.get("MUBU_ASSET_OUTPUT_DIR", str(Path(__file__).resolve().parents[1] / "assets"))).expanduser()
 os.makedirs(OUT, exist_ok=True)
 
 
